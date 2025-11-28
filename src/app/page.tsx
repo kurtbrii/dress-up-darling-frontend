@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, MouseEvent, useState } from "react";
+import { ChangeEvent, FormEvent, MouseEvent, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Upload, Wand2 } from "lucide-react";
+import { BeatLoader } from "react-spinners";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -115,6 +116,10 @@ export default function Home() {
   const [personPreview, setPersonPreview] = useState<string | null>(null);
   const [garmentFile, setGarmentFile] = useState<File | null>(null);
   const [garmentPreview, setGarmentPreview] = useState<string | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const createPreview = (file: File, setter: (value: string | null) => void) => {
     const reader = new FileReader();
@@ -122,31 +127,40 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (personFile) {
-      console.log("Person image:", personFile, "type:", personFile.type);
-      if (personPreview) {
-        const [, personBase64 = personPreview] = personPreview.split(",");
-        console.log("Person image base64:", personBase64);
-      } else {
-        console.log("Person image base64 not available.");
+    
+    setIsLoading(true);
+    
+    // Scroll to result section
+    setTimeout(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    
+    try {
+      const [, personBase64 = personPreview] = personPreview?.split(",") ?? [];
+      const [, garmentBase64 = garmentPreview] = garmentPreview?.split(",") ?? [];
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/images/generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          person_image_b64: personBase64,
+          clothes_image_b64: garmentBase64,
+          aspect_ratio: "9:16"
+        })
+      });
+
+      const data = await response.json();
+      if (data.status === 'success') {
+        const imageData = `data:image/png;base64,${data.generated_image_b64}`;
+        setResultImage(imageData as string);
       }
-    } else {
-      console.log("No person image selected.");
+    } catch (error) {
+      console.error('Error generating image:', error);
+    } finally {
+      setIsLoading(false);
     }
-    if (garmentFile) {
-      console.log("Garment image:", garmentFile, "type:", garmentFile.type);
-      if (garmentPreview) {
-        const [, garmentBase64 = garmentPreview] = garmentPreview.split(",");
-        console.log("Garment image base64:", garmentBase64);
-      } else {
-        console.log("Garment image base64 not available.");
-      }
-    } else {
-      console.log("No garment image selected.");
-    }
-    alert("submitting image...");
   };
 
   return (
@@ -194,9 +208,17 @@ export default function Home() {
             </div>
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-8 py-4 text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_45px_-28px_rgba(56,189,248,1)] transition hover:scale-[1.02]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-8 py-4 text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_45px_-28px_rgba(56,189,248,1)] transition hover:scale-[1.02] hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
+              disabled={!personPreview || !garmentPreview || isLoading}
             >
-              Initiate Styling
+              {isLoading ? (
+                <>
+                  <BeatLoader color="#ffffff" size={8} margin={4} />
+                  Generating...
+                </>
+              ) : (
+                'Initiate Styling'
+              )}
             </button>
           </form>
         </motion.header>
@@ -244,25 +266,59 @@ export default function Home() {
           </div>
 
           <motion.div
+            ref={resultRef}
             variants={panelVariants}
             transition={{ delay: 0.15, duration: 0.85, ease: "easeOut" }}
             className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-slate-900/80 to-black/80 p-8 shadow-[0_30px_120px_-60px_rgba(14,165,233,0.8)]"
           >
             <h2 className="text-2xl font-semibold text-white">Resulting</h2>
 
+
+            {/* image here */}
             <div className="relative mt-8 h-[420px] w-full overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-black">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),transparent_55%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(14,165,233,0.15),transparent)]" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center">
-                <Wand2 className="size-10 text-sky-200" />
-                <p className="text-2xl font-semibold tracking-wide text-white">
-                  Resulting Look
-                </p>
-                <p className="max-w-sm text-base text-white/70">
-                  Placeholder image canvas. Final render of your styled outfit
-                  will appear here.
-                </p>
-              </div>
+              {isLoading ? (
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <BeatLoader color="#0ea5e9" size={15} margin={8} />
+                  </motion.div>
+                  <motion.p
+                    className="text-lg font-semibold text-white"
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Generating your look...
+                  </motion.p>
+                </motion.div>
+              ) : resultImage ? (
+                <img
+                  src={resultImage}
+                  alt="Generated outfit result"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),transparent_55%)]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(14,165,233,0.15),transparent)]" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center">
+                    <Wand2 className="size-10 text-sky-200" />
+                    <p className="text-2xl font-semibold tracking-wide text-white">
+                      Resulting Look
+                    </p>
+                    <p className="max-w-sm text-base text-white/70">
+                      Placeholder image canvas. Final render of your styled outfit
+                      will appear here.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-white/50">
