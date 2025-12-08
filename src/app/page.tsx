@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, MouseEvent, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Upload, Wand2 } from "lucide-react";
 import { BeatLoader } from "react-spinners";
+import { Toaster, toast } from "sonner";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -118,6 +119,7 @@ export default function Home() {
   const [garmentPreview, setGarmentPreview] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [apiKey, setApiKey] = useState('');
   
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -141,15 +143,23 @@ export default function Home() {
       const [, personBase64 = personPreview] = personPreview?.split(",") ?? [];
       const [, garmentBase64 = garmentPreview] = garmentPreview?.split(",") ?? [];
 
+      const payload = {
+        person_image_b64: personBase64,
+        clothes_image_b64: garmentBase64,
+        aspect_ratio: "9:16",
+        api_key: apiKey
+      }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/images/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          person_image_b64: personBase64,
-          clothes_image_b64: garmentBase64,
-          aspect_ratio: "9:16"
-        })
+        body: JSON.stringify(payload)
       });
+
+      if (response.status !== 200) {
+        const errorData = await response.json();
+        toast.error(errorData.message || `Error: ${response.statusText}`);
+        return;
+      }
 
       const data = await response.json();
       if (data.status === 'success') {
@@ -164,7 +174,9 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.08),transparent_45%),#01030d] text-white">
+    <>
+      <Toaster />
+      <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.08),transparent_45%),#01030d] text-white">
       <div className="pointer-events-none absolute inset-0 opacity-40">
         <div className="absolute -top-20 right-10 h-64 w-64 rounded-full bg-sky-500/30 blur-[140px]" />
         <div className="absolute bottom-10 left-10 h-72 w-72 rounded-full bg-blue-600/30 blur-[150px]" />
@@ -204,6 +216,8 @@ export default function Home() {
                 required
                 placeholder="sk-live-xxxxxxxx"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-base text-white placeholder:text-white/40 focus:border-sky-400 focus:outline-none"
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
+                value={apiKey || ''}
               />
             </div>
             <button
@@ -321,7 +335,7 @@ export default function Home() {
               )}
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-white/50">
+            {/* <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-white/50">
               <span className="rounded-full border border-white/10 px-3 py-1">
                 4K Preview
               </span>
@@ -331,10 +345,11 @@ export default function Home() {
               <span className="rounded-full border border-white/10 px-3 py-1">
                 Physics-ready Mesh
               </span>
-            </div>
+            </div> */}
           </motion.div>
         </motion.section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
