@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, MouseEvent, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Upload, Wand2 } from "lucide-react";
+import { Sparkles, Upload, Wand2, Check } from "lucide-react";
 import { BeatLoader } from "react-spinners";
 import { Toaster, toast } from "sonner";
 
@@ -120,6 +120,9 @@ export default function Home() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiKey, setApiKey] = useState('');
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '9:16'>('9:16');
+  const [shotType, setShotType] = useState<'close_up' | 'full_body'>('full_body');
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -146,9 +149,12 @@ export default function Home() {
       const payload = {
         person_image_b64: personBase64,
         clothes_image_b64: garmentBase64,
-        aspect_ratio: "9:16",
+        shot_type: shotType,
+        aspect_ratio: aspectRatio,
         api_key: apiKey
       }
+
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/images/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,7 +193,7 @@ export default function Home() {
           initial="hidden"
           animate="visible"
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="space-y-6 text-center md:text-left"
+          className="relative z-10 space-y-6 text-center md:text-left"
         >
           <div className="space-y-4">
             <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -220,20 +226,128 @@ export default function Home() {
                 value={apiKey || ''}
               />
             </div>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-8 py-4 text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_45px_-28px_rgba(56,189,248,1)] transition hover:scale-[1.02] hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
-              disabled={!personPreview || !garmentPreview || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <BeatLoader color="#ffffff" size={8} margin={4} />
-                  Generating...
-                </>
-              ) : (
-                'Initiate Styling'
+            <div className="relative flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4 text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_45px_-28px_rgba(168,85,247,1)] transition hover:scale-[1.02] hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
+                disabled={isLoading}
+              >
+                <Sparkles className="size-5" />
+                Options
+              </button>
+
+              {showOptionsMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900 p-6 shadow-[0_20px_60px_-40px_rgba(168,85,247,0.9)] backdrop-blur-lg"
+                >
+                  <div className="space-y-6">
+                    {/* Resolution Section */}
+                    <div>
+                      <label className="block text-sm font-semibold uppercase tracking-widest text-white/80 mb-4">
+                        Resolution
+                      </label>
+                      <div className="space-y-2">
+                        {(['1:1', '9:16'] as const).map((res) => (
+                          <button
+                            key={res}
+                            type="button"
+                            onClick={() => setAspectRatio(res)}
+                            className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                              aspectRatio === res
+                                ? 'bg-purple-500/30 border border-purple-400/50 text-white'
+                                : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            <div
+                              className={`flex size-5 items-center justify-center rounded-full border ${
+                                aspectRatio === res
+                                  ? 'border-purple-400 bg-purple-500'
+                                  : 'border-white/30'
+                              }`}
+                            >
+                              {aspectRatio === res && (
+                                <Check className="size-3 text-white" />
+                              )}
+                            </div>
+                            <span className="flex-1 text-left capitalize font-medium">
+                              {res === '1:1' ? 'Square' : 'Portrait'}
+                            </span>
+                            <span className="text-xs text-white/50">
+                              {res}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Shot Type Section */}
+                    <div>
+                      <label className="block text-sm font-semibold uppercase tracking-widest text-white/80 mb-4">
+                        Shot Type
+                      </label>
+                      <div className="space-y-2">
+                        {(['close_up', 'full_body'] as const).map((shot) => (
+                          <button
+                            key={shot}
+                            type="button"
+                            onClick={() => setShotType(shot)}
+                            className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                              shotType === shot
+                                ? 'bg-cyan-500/30 border border-cyan-400/50 text-white'
+                                : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            <div
+                              className={`flex size-5 items-center justify-center rounded-full border ${
+                                shotType === shot
+                                  ? 'border-cyan-400 bg-cyan-500'
+                                  : 'border-white/30'
+                              }`}
+                            >
+                              {shotType === shot && (
+                                <Check className="size-3 text-white" />
+                              )}
+                            </div>
+                            <span className="flex-1 text-left capitalize font-medium">
+                              {shot.replace('_', ' ')}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionsMenu(false)}
+                    className="mt-6 w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Done
+                  </button>
+                </motion.div>
               )}
-            </button>
+
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-8 py-4 text-base font-semibold uppercase tracking-wide text-white shadow-[0_20px_45px_-28px_rgba(56,189,248,1)] transition hover:scale-[1.02] hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
+                disabled={!personPreview || !garmentPreview || isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <BeatLoader color="#ffffff" size={8} margin={4} />
+                    Generating...
+                  </>
+                ) : (
+                  'Initiate Styling'
+                )}
+              </button>
+            </div>
           </form>
         </motion.header>
 
