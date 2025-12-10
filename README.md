@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dress Up Darling — Virtual Try-On UI
 
-## Getting Started
+Dress Up Darling is a Next.js 16 frontend for generating AI outfit renders. Upload a person photo and a garment image, choose your framing (square or portrait) and shot type (close-up or full body), provide an API key, and the app requests a generated composite from your backend.
 
-First, run the development server:
+## Features
+- Dual upload panels with inline previews and clear buttons for person and garment images.
+- Options menu to pick aspect ratio (`1:1` or `9:16`) and shot type (`close_up` or `full_body`).
+- Animated, neon-inspired UI with framer-motion, loaders, and toast notifications.
+- Result viewer that shows the generated image once the API responds.
 
+## Prerequisites
+- Node.js 18.18+ (20+ recommended).
+- npm (bundled with Node). Yarn/pnpm/bun also work if you prefer.
+
+## Setup
+1) Install dependencies  
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) Configure environment  
+Create a `.env.local` file with your backend base URL:
+```bash
+NEXT_PUBLIC_API_URL=https://backend.example.com
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3) Run the dev server  
+```bash
+npm run dev
+```
+Then open http://localhost:3000.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Using the app
+1) Enter your API key in the top form.  
+2) Upload a person image and a clothes image (PNG/WEBP recommended).  
+3) (Optional) Click **Options** to adjust aspect ratio and shot type.  
+4) Click **Initiate Styling**. The result card scrolls into view and shows the generated render when ready. Errors are surfaced via toasts.
 
-## Learn More
+## API contract (frontend expectation)
+- Endpoint: `POST {NEXT_PUBLIC_API_URL}/images/generate-image`
+- Payload:
+  - `person_image_b64`: base64 string of the person image (no data URI prefix)
+  - `clothes_image_b64`: base64 string of the garment image (no data URI prefix)
+  - `shot_type`: `"close_up"` or `"full_body"`
+  - `aspect_ratio`: `"1:1"` or `"9:16"`
+  - `api_key`: string from the user input
+- Success response: `{ status: "success", generated_image_b64: "<base64 png>" }`
+- Non-200 responses should include a `message`; it is shown in a toast.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
+- `npm run dev` — start Next.js in development mode
+- `npm run build` — production build
+- `npm run start` — run the built app
+- `npm run lint` — lint the codebase
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key files
+- `src/app/page.tsx` — main UI and request/preview logic.
+- `eslint.config.mjs` — ESLint configuration.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Screenshots & Examples
 
-## Deploy on Vercel
+### Full Body Portrait
+![Full Body Portrait](./assets/full-body_portrait.png)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Half Body Square
+![Half Body Square](./assets/half-body_square.png)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Person Without Clothes
+![Person Without Clothes](./assets/person_no-clothes.png)
+
+### No Person with Clothes
+![No Person with Clothes](./assets/no-person_clothes.png)
+
+### No Person Without Clothes
+![No Person Without Clothes](./assets/no-person_no-clothes.png)
